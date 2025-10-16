@@ -190,21 +190,23 @@ colcon build
 source install/setup.bash
 ros2 run example_cpp ros_cpp_node
 ```
+编译指定的功能包   
+`colcon build --packages-select 功能包名字`
 
 ### 【话题】  
-列出话题   
+- 列出话题   
 `ros2 topic list`     
 
-查看话题信息   
+- 查看话题信息   
 `ros2 topic info /话题名字`    
 
-查看消息具体内容     
+- 查看消息具体内容     
 `ros2 interface show 消息类型`     
 
-监听消息    
+- 监听消息    
 `ros2 topic echo /话题名字`     
 
-发送消息     
+- 发送消息     
 `ros2 topic pub /话题名字 消息类型 "{数据名: {变量：}}"`     
 **注意冒号后面有空格，层级关系用括号划分，消息每1s发送一次**
 
@@ -275,6 +277,90 @@ public:
         RCLCPP_INFO(this->get_logger(),"Subscribe has created successfully!");
         /*创建话题订阅者*/
         subscribe = this->create_subscription<std_msgs::msg::String>("command",10,std::bind(&TopicSubscribe01::command_callback,this,std::placeholders::_1));
+    }
+};
+```
+### 【服务】
+- 列出服务    
+`ros2 service list`     
+
+- 手动调用话题 
+`ros2 service call /服务名 服务类型 "{数据名: {变量1：,变量2：}}"`     
+**格式类似与话题pub，变量默认为0**
+
+- 查看服务接口类型    
+`ros2 service type /服务名`    
+
+- 查看某个接口类型的服务有哪些   
+`ros2 sercive find 服务类型`   
+
+服务接口导入与话题接口导入一样   
+创建服务端
+```
+class ServiceClient : public rclcpp::Node
+{
+private:
+    /*声明服务指针*/
+    rclcpp::Service<example_interfaces::srv::AddTwoInts>::SharedPtr add_server;
+    /*回调函数，其中两个参数分别为请求和响应类型对应的智能指针*/
+    void handle_add_two_ints(
+    const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request>request,
+    const std::shared_ptr<example_interfaces::srv::AddTwoInts::Response>response){
+    RCLCPP_INFO(this->get_logger(),"get the numble %ld and %ld",request->a,request->b);
+    response->sum = request->a + request->b;
+    }
+public:
+    ServiceClient(std::string name):Node(name)
+    {
+        RCLCPP_INFO(this->get_logger(),"client has created successfully!");
+        /*创建指针，两个参数分别为服务名字和回调函数*/
+        add_server = this->create_service<example_interfaces::srv::AddTwoInts>("add_two_ints_srv",std::bind(&ServiceClient01::handle_add_two_ints,this,std::placeholders::_1,std::placeholders::_2));
+    }
+};
+```  
+创建客户端
+```
+class ServiceClient01 : public rclcpp::Node
+{
+private:
+    /*声明客户端指针*/
+    rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedPtr client_;
+    /*回调函数，输入参数为SharedFuture类型*/
+    void result_callback(const rclcpp::Client<example_interfaces::srv::AddTwoInts>::SharedFuture result_future)
+    {
+        auto response = result_future.get();
+        RCLCPP_INFO(this->get_logger(),"the result is %ld",response->sum);
+    }
+
+public:
+    ServiceClient01(std::string name):Node(name)
+    {
+        RCLCPP_INFO(this->get_logger(),"server has created successfully!");
+        /*创建客户端*/
+        client_ = this->create_client<example_interfaces::srv::AddTwoInts>("add_two_ints_srv");
+    }
+
+    void send_requset(int a,int b)
+    {
+        /*1、等待客户端上线，延迟等待时间为1s*/
+        while(!client_->wait_for_service(std::chrono::seconds(1)))
+        {
+            /*等待时检测rclcpp的状态*/
+            if(!rclcpp::ok())
+            {
+                RCLCPP_INFO(this->get_logger(),"等待服务过程被中断...");
+                return;
+            }
+            RCLCPP_INFO(this->get_logger(),"等待服务器上线中...");
+        }
+
+        /*2、构造请求*/
+        auto request = std::make_shared<example_interfaces::srv::AddTwoInts_Request>();
+        request->a = a;
+        request->b = b;
+
+        /*3、发送异步请求，然后等待返回，返回时调用回调函数*/
+        client_->async_send_request(request,std::bind(&ServiceClient01::result_callback,this,std::placeholders::_1));
     }
 };
 ```
