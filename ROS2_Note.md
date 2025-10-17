@@ -211,15 +211,15 @@ ros2 run example_cpp ros_cpp_node
 **注意冒号后面有空格，层级关系用括号划分，消息每1s发送一次**
 
 导入消息接口    
-CMakeLists.txt文件中添加：     
+1. CMakeLists.txt文件中添加：     
 ```
 find_package(std_msgs REQUIRED)
 ament_target_dependencies(ros_cpp_node rclcpp std_msgs)
 ```
-package.xml文件中添加：     
+2. package.xml文件中添加：     
 `<build_depend>std_msgs</build_depend>`     
-**ROS2会将消息文件转换成一个类，并把其中的定义转换成类的成员函数。**
-然后我们添加对应的头文件：    
+**ROS2会将消息文件转换成一个类，并把其中的定义转换成类的成员函数。**     
+3. 然后我们添加对应的头文件：    
 `#include "std_msgs/msg/string.hpp"`    
 
 创建话题发布者
@@ -363,4 +363,80 @@ public:
         client_->async_send_request(request,std::bind(&ServiceClient01::result_callback,this,std::placeholders::_1));
     }
 };
+```    
+
+### 【自定义接口】   
+话题接口为`xxx.msg`,例如：    
 ```
+int64 num
+```
+服务接口为`xxx.srv`,例如：   
+```
+int64 a
+int64 b
+---
+int64 sum
+```     
+动作接口为`xxx.action`,例如：   
+```
+int32 order
+---
+int32[] sequence
+---
+int32[] partial_sequence
+```   
+   
+创建自定义接口，需要在`msg`、`srv`、`action`文件夹下创建对应的`.msg`、`.srv`、`.action`文件：    
+```
+.
+├── CMakeLists.txt
+├── msg
+│   ├── xxx1.msg
+│   └── xxx2.msg
+├── package.xml
+└── srv
+    └── xxx3.srv
+```
+在`CMakeLists.txt`中添加依赖：    
+```
+find_package(rosidl_default_generators REQUIRED)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/xxx1.msg"
+  "msg/xxx2.msg"
+  "srv/xxx3.srv"
+  #如果存在混合包，即一个包中包含另一个的包的接口，则需要添加
+  #DEPENDENCIES xxx
+)
+```   
+然后在`package.xml`中添加依赖：    
+```
+<member_of_group>rosidl_interface_packages</member_of_group>
+```   
+编译后，会在`/install/功能包名/include`中看到c++头文件    
+如果想要查看所有接口内容：    
+```
+ros2 interface list
+```   
+如果想要查看某个接口内容：    
+```
+ros2 interface show 接口类型
+```   
+### 【参数】   
+- 列出参数   
+`ros2 param list`     
+
+- 查看参数描述     
+`ros2 param describe /节点名 参数名`   
+
+- 获取参数值     
+`ros2 param get /节点名 参数名`
+
+- 设置参数    
+`ros2 param set /节点名 参数名 参数值`     
+
+- 存储参数    
+`ros2 param dump /节点名 > 参数文件名.yaml`    
+
+- 加载参数    
+`ros2 param load /节点名 参数文件名.yaml`     
