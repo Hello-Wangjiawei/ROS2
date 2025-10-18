@@ -440,3 +440,47 @@ ros2 interface show 接口类型
 
 - 加载参数    
 `ros2 param load /节点名 参数文件名.yaml`     
+
+```
+class ParametersBasicNode : public rclcpp::Node {
+ public:
+    ParametersBasicNode(std::string name) : Node(name) {
+    RCLCPP_INFO(this->get_logger(), "节点已启动：%s.", name.c_str());
+    /*声明参数，入口第一个参数为参数名字，第二个参数为默认值*/
+    this->declare_parameter("rcl_log_level",0);
+    /*获取参数，入口第一个参数为参数名字，第二个参数为存储结果的变量*/
+    this->get_parameter("rcl_log_level",log_level);
+    /*设置日至等级*/
+    this->get_logger().set_level((rclcpp::Logger::Level)log_level);
+    timer = this->create_wall_timer(std::chrono::microseconds(1000),std::bind(&ParametersBasicNode::timer_callback,this));
+  }
+ private:
+    int log_level;
+    rclcpp::TimerBase::SharedPtr timer;
+
+    void timer_callback()
+    {
+        this->get_parameter("rcl_log_level",log_level);
+        this->get_logger().set_level((rclcpp::Logger::Level)log_level);
+        std::cout<<"======================================================"<<std::endl;
+        RCLCPP_DEBUG(this->get_logger(), "我是DEBUG级别的日志，我被打印出来了!");
+        RCLCPP_INFO(this->get_logger(), "我是INFO级别的日志，我被打印出来了!");
+        RCLCPP_WARN(this->get_logger(), "我是WARN级别的日志，我被打印出来了!");
+        RCLCPP_ERROR(this->get_logger(), "我是ERROR级别的日志，我被打印出来了!");
+        RCLCPP_FATAL(this->get_logger(), "我是FATAL级别的日志，我被打印出来了!");
+    }
+};
+```   
+运行节点时输入参数    
+`ros2 run 功能包名 节点名 --ros-args -p 参数名:=2`    
+### 【动作】
+- 列出动作    
+ `ros2 action list`     
+加上`-t`后可同时查看动作类型
+
+- 查看动作信息     
+`ros2 action info /动作名`   
+
+- 发送动作请求     
+`ros2 action send_goal /动作名 动作类型 "{数据名: {变量1：,变量2：}}"`     
+加入`--feedback`参数可查看实时反馈信息
