@@ -279,7 +279,16 @@ public:
         subscribe = this->create_subscription<std_msgs::msg::String>("command",10,std::bind(&TopicSubscribe01::command_callback,this,std::placeholders::_1));
     }
 };
+```   
+记录话题信息    
 ```
+ros2 bag record -o 自定义文件名 /话题名
+```   
+播放记录的话题
+```
+ros2 bag play 自定义文件名.
+```   
+查看话题信息    
 ### 【服务】
 - 列出服务    
 `ros2 service list`     
@@ -388,7 +397,6 @@ int32[] partial_sequence
    
 创建自定义接口，需要在`msg`、`srv`、`action`文件夹下创建对应的`.msg`、`.srv`、`.action`文件：    
 ```
-.
 ├── CMakeLists.txt
 ├── msg
 │   ├── xxx1.msg
@@ -483,4 +491,57 @@ class ParametersBasicNode : public rclcpp::Node {
 
 - 发送动作请求     
 `ros2 action send_goal /动作名 动作类型 "{数据名: {变量1：,变量2：}}"`     
-加入`--feedback`参数可查看实时反馈信息
+加入`--feedback`参数可查看实时反馈信息      
+  
+### 【launch】    
+在功能包目录下创建launch文件夹，并在launch文件夹下创建launch.py文件：     
+```
+├── src
+├── CMakeLists.txt
+├── package.xml
+└── launch
+    └── xxx.launch.py
+```   
+编写xxx.launch.py文件：     
+```
+# 导入库
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    """launch内容描述函数，由ros2 launch 扫描调用"""
+    node1 = Node(
+        package="package1",
+        executable="node1"
+        namespace = "n1"
+        parameters=[{
+            "param1": 1,
+            "param2": "hello"
+        }]
+    )
+    node2 = Node(
+        package="pacaage2",
+        executable="node2"
+        namespace = "n2"
+        parameters=[{
+            "param1": 2,
+            "param2": "world"
+        }]
+    )
+    # 创建LaunchDescription对象launch_description,用于描述launch文件
+    launch_description = LaunchDescription(
+        [node1, node2])
+    # 返回让ROS2根据launch描述执行节点
+    return launch_description
+```    
+修改CMakeLists.txt文件：   
+```
+install(DIRECTORY launch
+      DESTINATION share/${PROJECT_NAME}
+)
+```
+编译后，在`install/功能包名/share/功能包名/launch`中可以看到launch文件.    
+运行launch文件：    
+```
+ros2 launch 功能包名 xxx.launch.py
+```
